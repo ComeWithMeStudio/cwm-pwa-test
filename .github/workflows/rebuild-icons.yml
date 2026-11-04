@@ -1,0 +1,42 @@
+name: Rebuild corrected CWM icons
+on:
+  push:
+    paths:
+      - .github/workflows/rebuild-icons.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow
+      - name: Download original logo and render with correct aspect ratio
+        run: |
+          curl --fail --location --retry 3 -o /tmp/cwm-logo.png https://raw.githubusercontent.com/ComeWithMeStudio/come-with-me-app/main/cwm-logo.png
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          logo=Image.open('/tmp/cwm-logo.png').convert('RGBA')
+          for size in (192,512):
+              width=size
+              height=round(width*logo.height/logo.width)
+              fitted=logo.resize((width,height),Image.Resampling.LANCZOS)
+              canvas=Image.new('RGBA',(size,size),'#f8f2ec')
+              canvas.alpha_composite(fitted,(round(-44*size/512),round((size-height)/2)))
+              canvas.convert('RGB').save(f'icons/icon-{size}.png')
+              print(size, width, height)
+          PY
+      - name: Commit icons
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add icons/icon-192.png icons/icon-512.png
+          if ! git diff --cached --quiet; then
+            git commit -m "Fix squashed CWM logo on test PWA icons"
+            git push
+          fi
