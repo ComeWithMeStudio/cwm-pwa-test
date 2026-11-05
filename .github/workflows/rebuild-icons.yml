@@ -23,11 +23,15 @@ jobs:
           from pathlib import Path
           logo=Image.open('/tmp/cwm-logo.png').convert('RGBA')
           for size in (192,512):
-              width=round(size*1.10*1.04)
+              previous_width=round(size*1.10*1.04)
+              previous_height=round(previous_width*logo.height/logo.width)
+              width=round(previous_width*1.04)
               height=round(width*logo.height/logo.width)
               fitted=logo.resize((width,height),Image.Resampling.LANCZOS)
               canvas=Image.new('RGBA',(size,size),'#f8f2ec')
-              canvas.alpha_composite(fitted,(size-width, round((size-height)/2-size*0.08)))
+              previous_top=round((size-previous_height)/2-size*0.08)
+              top=previous_top-(height-previous_height)
+              canvas.alpha_composite(fitted,(size-width,top))
               canvas.convert('RGB').save(f'icons/icon-{size}.png')
               print(size, width, height)
           PY
